@@ -1,0 +1,14 @@
+# Dependency lokal (dapat dipasang kembali lewat npm install)
+node_modules/
+
+# Variabel lingkungan dan rahasia
+.env
+.env.*
+!.env.example
+
+# Log dan artefak sementara
+*.log
+npm-debug.log*
+coverage/
+.DS_Store
+Thumbs.db

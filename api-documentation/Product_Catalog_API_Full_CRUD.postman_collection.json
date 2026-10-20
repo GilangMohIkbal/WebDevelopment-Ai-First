@@ -1,0 +1,717 @@
+{
+  "info": {
+    "name": "Product Catalog Service - Full CRUD Assignment",
+    "description": "Dokumentasi Postman untuk Mini Project Back-End AI-First. GET katalog (q, category, minPrice, maxPrice, sort), detail, POST, PUT (partial update sesuai implementasi), DELETE, dan validasi 400/404. Jalankan server localhost:3000. Folder CRUD dijalankan berurutan karena membuat lalu menghapus data sementara",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Browse & Detail",
+      "item": [
+        {
+          "name": "All products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products",
+            "description": "PR-001: mengembalikan daftar 9 produk, dengan field data dan total."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Total 9 products\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(9)); });",
+                  "pm.test(\"Array data\", function () { const body = pm.response.json(); pm.expect(body.data.to.be.an(\"array\")); });",
+                  "pm.test(\"Required fields\", function () { const body = pm.response.json(); pm.expect(body.data[0].to.have.all.keys(\"id\",\"name\",\"description\",\"category\",\"price\",\"image\",\"variants\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Detail product ID 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/1",
+            "description": "PR-006: detail produk berdasarkan ID."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"ID is 1\", function () { const body = pm.response.json(); pm.expect(body.id.to.eql(1)); });",
+                  "pm.test(\"Variant fields present\", function () { const body = pm.response.json(); pm.expect(body.variants.to.have.all.keys(\"colorOrSize\",\"quantity\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Missing product ID 99",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/99",
+            "description": "PR-006: produk tidak ditemukan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Not found message\", function () { const body = pm.response.json(); pm.expect(body.message.to.include(\"tidak ditemukan\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Search",
+      "item": [
+        {
+          "name": "Search sepatu (lowercase)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?q=sepatu",
+            "description": "PR-002: pencarian partial pada nama/deskripsi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Two matching products\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(2)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Search SEPATU uppercase",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?q=SEPATU",
+            "description": "PR-002: pencarian tidak membedakan kapital."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Case insensitive count\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(2)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Empty search results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?q=nonexistentproduct",
+            "description": "PR-002: hasil pencarian kosong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Empty data\", function () { const body = pm.response.json(); pm.expect(body.data.to.be.an(\"array\").that.is.empty); });",
+                  "pm.test(\"Total zero\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(0)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Category & Price",
+      "item": [
+        {
+          "name": "Filter Electronics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?category=Electronics",
+            "description": "PR-003: kategori exact case-insensitive."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Two electronic products\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(2)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Inclusive price bounds",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?minPrice=120000&maxPrice=180000",
+            "description": "PR-004: kedua harga pada batas harus termasuk."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Two products at inclusive bounds\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(2)); });",
+                  "pm.test(\"Every price within range\", function () { const body = pm.response.json(); pm.expect(body.data.every(p => p.price >= 120000 && p.price <= 180000).to.be.true); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Invalid price range",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?minPrice=500000&maxPrice=100000",
+            "description": "PR-004: minimum lebih besar dari maksimum."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Helpful error message\", function () { const body = pm.response.json(); pm.expect(body.message.to.include(\"minPrice\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Invalid numeric price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?minPrice=abc",
+            "description": "PR-004: minPrice bukan angka."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Helpful numeric error\", function () { const body = pm.response.json(); pm.expect(body.message.to.include(\"angka\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Sorting",
+      "item": [
+        {
+          "name": "Sort price descending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?sort=price_desc",
+            "description": "PR-005: harga terbesar ke terkecil."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Sorted descending\", function () { const body = pm.response.json(); pm.expect(body.data.every((p,i,a) => i === 0 || a[i-1].price >= p.price).to.be.true); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Sort name ascending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?sort=name_asc",
+            "description": "PR-005: nama A-Z."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Nine sorted products\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(9)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Invalid sort value",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?sort=invalid",
+            "description": "Validasi sort di luar daftar pilihan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error explains sorting\", function () { const body = pm.response.json(); pm.expect(body.message.to.include(\"sort\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Combined",
+      "item": [
+        {
+          "name": "Search + category + min price + sorting",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?q=sepatu&category=Footwear&minPrice=300000&sort=price_desc",
+            "description": "PR-007: beberapa kriteria diterapkan bersama."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Two matched footwear items\", function () { const body = pm.response.json(); pm.expect(body.total.to.eql(2)); });",
+                  "pm.test(\"Sort and category\", function () { const body = pm.response.json(); pm.expect(body.data.every(p=>p.category===\"Footwear\" && p.price>=300000).to.be.true && body.data[0].price >= body.data[1].price); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - CRUD Mutation Flow (run sequentially)",
+      "description": "Jalankan request dalam folder ini dari atas ke bawah. POST menyimpan {{createdProductId}} sebagai Collection Variable, PUT memperbaruinya, DELETE menghapusnya. Jika Anda menjalankan sebagian request secara terpisah, pastikan produk test telah dibuat.",
+      "item": [
+        {
+          "name": "01 - POST Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products",
+            "description": "Membuat produk baru, menyimpan ID untuk test berikutnya. Gunakan Collection Run berurutan.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jam Tangan Digital\",\n  \"description\": \"Jam tangan digital dengan stopwatch dan tahan air.\",\n  \"category\": \"Electronics\",\n  \"price\": 250000,\n  \"image\": \"https://picsum.photos/seed/jam-tangan-digital/400/400\",\n  \"variants\": {\n    \"colorOrSize\": [\n      \"Black\",\n      \"Silver\"\n    ],\n    \"quantity\": 20\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const p=pm.response.json(); pm.expect(p.name).to.eql(\"Jam Tangan Digital\"); pm.expect(p.id).to.be.a(\"number\"); pm.collectionVariables.set(\"createdProductId\",String(p.id));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - GET Verify created",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "Memastikan produk baru tersedia setelah POST."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().name).to.eql(\"Jam Tangan Digital\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - PUT Partial price",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "PUT pada implementasi ini menerima body parsial; hanya harga yang berubah.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 300000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const p=pm.response.json(); pm.expect(p.price).to.eql(300000); pm.expect(p.variants.quantity).to.eql(20);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - PUT Partial variant quantity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "Update quantity saja tanpa mengubah colorOrSize.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variants\": {\n    \"quantity\": 99\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const p=pm.response.json(); pm.expect(p.variants.quantity).to.eql(99); pm.expect(p.variants.colorOrSize).to.eql([\"Black\",\"Silver\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - GET Verify updated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "Verifikasi seluruh perubahan PUT."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const p=pm.response.json(); pm.expect(p.price).to.eql(300000); pm.expect(p.variants.quantity).to.eql(99);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 - POST Invalid missing fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products",
+            "description": "POST invalid harus menghasilkan daftar errors tanpa menambah data.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 50000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors).to.be.an(\"array\").that.is.not.empty;"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 - PUT Invalid negative price",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "Harga negatif tidak boleh diterima.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": -100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors).to.be.an(\"array\").that.is.not.empty;"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - PUT Not found",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/999",
+            "description": "Produk ID 999 tidak ada.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 1000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 - DELETE Created product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "Hapus hanya produk yang dibuat pada langkah 1, jangan hapus data asli."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().message).to.include(\"berhasil dihapus\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 - GET Verify deleted",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "description": "ID yang dihapus harus menghasilkan 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 - DELETE Not found",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/999",
+            "description": "DELETE pada ID tidak ada harus 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - GET Verify original count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products",
+            "description": "Jumlah dataset kembali ke 9 setelah CRUD flow."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().total).to.eql(9);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "createdProductId",
+      "value": "10",
+      "type": "string"
+    }
+  ]
+}
