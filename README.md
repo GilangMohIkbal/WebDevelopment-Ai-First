@@ -1,112 +1,95 @@
-# Product Catalog REST API — CRUD + PATCH
+﻿# Product Catalog REST API â€” CRUD + MySQL
 
-Mini Project **Modern Back-End Development with AI** menggunakan JavaScript, Node.js, Express.js. Mendukung GET katalog dan detail, pencarian, filter kategori/harga, sorting, serta operasi POST, PUT, PATCH, DELETE.
+Mini Project **Modern Back-End Development with AI** menggunakan JavaScript, Node.js, Express.js, dan **MySQL** sebagai penyimpanan utama.
 
-**Workflow dokumentasi:** `.kiro/specs/product-catalog-crud/` berisi Requirements, Design, dan Tasks. Desain memotret implementasi proyek yang sudah ada, kemudian perubahan PATCH dan pemisahan arsitektur. Specs ini merupakan dokumentasi retrospektif beserta enhancement, bukan klaim semua tahapan dilakukan sebelum coding.
+**Workflow dokumentasi:** `.kiro/specs/product-catalog-crud/` berisi Requirements, Design, dan Tasks yang mencakup kebutuhan CRUD awal serta migrasi MySQL (R19-R21).
 
 ## Persyaratan
 
-- Node.js **18 atau lebih baru** (native `structuredClone`, `node:test`)
+- Node.js **18 atau lebih baru**
 - npm
+- **MySQL Community Server** berjalan secara lokal (database `product_catalog`, user `catalog_app`)
 - Postman untuk pengujian HTTP
+
+## Setup database
+
+### 1. Buat skema tabel
+
+Jalankan `database/schema.sql` di MySQL Workbench atau via CLI:
+
+`mysql -u root -p product_catalog < database/schema.sql`
+
+### 2. Isi data awal (jika tabel masih kosong)
+
+`mysql -u root -p product_catalog < database/seed_product_catalog.sql`
+
+Jangan menjalankan seed ulang jika data sudah ada.
+
+### 3. Buat file .env
+
+Salin .env.example menjadi .env, lalu isi password:
+
+`cp .env.example .env`
+
+Isi nilai di .env:
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=catalog_app
+DB_PASSWORD=<password_catalog_app_Anda>
+DB_NAME=product_catalog
+
+File .env diabaikan oleh Git. Jangan commit file ini.
 
 ## Jalankan aplikasi
 
-```bash
-npm ci
-npm run dev
-```
+`npm ci && npm run dev`
 
-Server berjalan di `http://localhost:3000`. Gunakan `npm start` untuk mode tanpa auto-restart.
+Server berjalan di http://localhost:3000 dan terhubung ke MySQL.
+Jika koneksi gagal, server menampilkan pesan aman (tanpa password) dan keluar.
 
-Untuk menjalankan pengujian otomatis logika aplikasi:
+## Pengujian
 
-```bash
-npm test
-```
+Unit tests (tanpa database): `npm test`
 
-`npm test` menggunakan Node.js test runner, tanpa perlu server berjalan. Jalankan **Postman** secara terpisah untuk memeriksa request/response HTTP nyata. `npm ci` dapat diganti `npm install` jika diperlukan.
+Integration tests (memerlukan MySQL dan .env): `npm run test:integration`
+
+Integration test membuat dan menghapus data terisolasi - tidak menghapus 9 produk seed.
 
 ## Struktur proyek
 
-```text
-src/
-├── app.js                       # composition root + Express setup
-├── routes/products.js           # route definitions only
-├── controllers/productController.js
-├── services/productService.js   # use cases, filter & CRUD
-├── domain/errors.js             # application errors
-├── repositories/inMemoryProductRepository.js
-├── data/products.js             # seed 9 products in 4 categories
-└── utils/validateProduct.js     # shared input validation
-test/productService.test.js       # Node.js automated tests
-api-documentation/               # Postman Collection + guide
-.kiro/specs/product-catalog-crud/ # requirements, design, tasks
-```
-
-Pemisahan ini adalah arsitektur berlapis **terinspirasi Clean Architecture**, karena service tidak bergantung pada Express atau data store konkret; repository diinjeksi dari `app.js`.
+src/app.js                              - composition root + Express setup
+src/routes/products.js                  - route definitions only
+src/controllers/productController.js
+src/services/productService.js          - use cases, filter & CRUD
+src/domain/errors.js
+src/repositories/inMemoryProductRepository.js  - in-memory (unit test)
+src/repositories/mysqlProductRepository.js     - MySQL adapter (runtime)
+src/db/pool.js                          - mysql2/promise connection pool
+src/data/products.js                    - seed 9 products
+src/utils/validateProduct.js
+database/schema.sql                     - CREATE TABLE definitions
+database/seed_product_catalog.sql       - data awal 9 produk
+test/productService.test.js             - unit tests (npm test)
+test/mysqlRepository.integration.test.js - integration tests
+api-documentation/                      - Postman Collection + guide
+.env.example                            - template konfigurasi
 
 ## API
 
-| Method | Endpoint | Kegunaan | HTTP success |
-| --- | --- | --- | --- |
-| GET | `/api/products` | Browse, search, filter, sort | 200 |
-| GET | `/api/products/:id` | Detail produk | 200 |
-| POST | `/api/products` | Buat produk baru | 201 |
-| PUT | `/api/products/:id` | Ubah sebagian field (**perilaku lama dipertahankan**) | 200 |
-| PATCH | `/api/products/:id` | Ubah sebagian field, termasuk nested `variants` | 200 |
-| DELETE | `/api/products/:id` | Hapus produk | 200 |
+GET    /api/products        Browse, search, filter, sort  200
+GET    /api/products/:id    Detail produk                 200
+POST   /api/products        Buat produk baru              201
+PUT    /api/products/:id    Partial update (legacy)       200
+PATCH  /api/products/:id    Partial update + nested       200
+DELETE /api/products/:id    Hapus produk                  200
 
-Error: **400** untuk input/query invalid, **404** untuk ID tidak ditemukan.
+Error: 400 input invalid, 404 tidak ditemukan, 500 error database.
 
-Parameter GET list semuanya opsional: `q` (keyword name/description, case-insensitive), `category` (exact case-insensitive), `minPrice`, `maxPrice` (batas inklusif, IDR), `sort` (`name_asc`, `name_desc`, `price_asc`, `price_desc`). Parameter dapat dikombinasikan.
+Query params GET list (semua opsional): q, category, minPrice, maxPrice, sort (name_asc/name_desc/price_asc/price_desc).
 
-Contoh:
+## Catatan persistensi
 
-```http
-GET http://localhost:3000/api/products?q=sepatu&category=Footwear&minPrice=300000&sort=price_desc
-```
-
-GET list merespons `{ "data": [...], "total": N }` dan jika kosong menambahkan `message`.
-
-### Contoh POST
-
-```http
-POST http://localhost:3000/api/products
-Content-Type: application/json
-```
-
-```json
-{
-  "name": "Jam Tangan Digital",
-  "description": "Jam tangan digital dengan stopwatch dan tahan air.",
-  "category": "Electronics",
-  "price": 250000,
-  "image": "https://picsum.photos/seed/jam-tangan-digital/400/400",
-  "variants": {
-    "colorOrSize": ["Black", "Silver"],
-    "quantity": 20
-  }
-}
-```
-
-Response **201** mengembalikan produk dengan ID otomatis (misalnya `10` pada dataset awal).
-
-### Contoh PUT dan PATCH
-
-Keduanya menerima **body parsial** untuk menjaga kompatibilitas implementasi PUT lama, contohnya:
-
-```http
-PATCH http://localhost:3000/api/products/10
-Content-Type: application/json
-```
-
-```json
-{ "variants": { "quantity": 99 } }
-```
-
-Response 200 berisi produk terbaru; `variants.colorOrSize` yang lama tetap ada. Perilaku partial pada PUT adalah **kompatibilitas mini project**, berbeda dari konvensi umum PUT sebagai full replace.
-
-## Dokumentasi API dan pengujian
-
-Impor `api-documentation/Product_Catalog_API_Full_CRUD.postman_collection.json` ke Postman, lalu baca `api-documentation/PANDUAN_POSTMAN.md`. Jalankan folder CRUD **berurutan**, karena operasi POST, PUT, PATCH, DELETE mengubah data memori.
+Data POST/PUT/PATCH/DELETE tersimpan di MySQL dan bertahan setelah server restart.
+npm test (unit) tidak memerlukan database.
+Restart server membaca ulang dari MySQL, bukan mereset ke data awal.

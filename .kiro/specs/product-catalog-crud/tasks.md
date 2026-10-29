@@ -1,10 +1,10 @@
-# Implementation Plan — Product Catalog CRUD + PATCH
+# Implementation Plan — Product Catalog CRUD + PATCH + MySQL
 
 ## Overview
 
-Dokumen `tasks.md` ini adalah **checklist implementasi dan verifikasi retrospektif** berdasarkan source code yang telah dibuat dan refactor/PATCH tambahan. Ini **bukan** bukti bahwa tugas awal dieksekusi oleh Kiro Spec Agent satu per satu. Penanda `[x]` menunjukkan bagian yang sudah diimplementasikan atau diuji sesuai bukti yang tersedia; `[ ]` menunjukkan aktivitas lokal dan pengumpulan yang masih perlu dilakukan.
+Dokumen `tasks.md` ini adalah **checklist implementasi dan verifikasi retrospektif**. Penanda `[x]` menunjukkan bagian yang sudah diimplementasikan dan diverifikasi melalui kode atau `npm test`; `[ ]` menunjukkan aktivitas yang masih perlu dilakukan secara manual oleh pengguna (pengujian HTTP live, GitHub push, pengumpulan).
 
-Rujukan `R1` sampai `R18` menunjuk ke `.kiro/specs/product-catalog-crud/requirements.md`. Pengembangan tetap menggunakan in-memory array dan tidak menambah database, autentikasi, atau frontend.
+Rujukan `R1`–`R21` menunjuk ke `.kiro/specs/product-catalog-crud/requirements.md`. Grup 1–4 mencakup implementasi CRUD in-memory awal. Grup 5–6 mencakup migrasi MySQL (R19–R21).
 
 ## Tasks
 
@@ -42,7 +42,29 @@ Rujukan `R1` sampai `R18` menunjuk ke `.kiro/specs/product-catalog-crud/requirem
 - [ ] 4.5 Jalankan `npm ci` atau `npm install` dan `npm run dev` di komputer lokal pengguna. **R1–R18**
 - [ ] 4.6 Jalankan **HTTP nyata** Postman Collection Runner; simpan hasil GET, POST, PUT, PATCH, DELETE, 400, dan 404. **R1–R17**
 - [ ] 4.7 Push versi revisi ke repository GitHub, termasuk `.kiro/specs`, tes, dan dokumentasi; pastikan `.gitignore` tidak mengecualikan Specs. **R16, R18**
-- [ ] 4.8 Buat ZIP penyerahan LMS tanpa `node_modules` dan `.git`. **Submission**
+- [ ] 4.8 Buat ZIP penyerahan LMS tanpa `node_modules` dan `.env`. **Submission**
+
+### 5. MySQL Repository and Infrastructure
+
+- [x] 5.1 Install `mysql2` and `dotenv` as production dependencies via npm. **R19, R21** `package.json`
+- [x] 5.2 Create `.env.example` with placeholder values for `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`; do not create `.env` itself. **R21** `.env.example`
+- [x] 5.3 Add `.env` to `.gitignore` if not already present. **R21** `.gitignore`
+- [x] 5.4 Create `database/schema.sql` with `CREATE TABLE IF NOT EXISTS` for `products` and `product_variant_options` matching the existing database schema. **R21** `database/schema.sql`
+- [x] 5.5 Create `src/db/pool.js` exporting a singleton `mysql2/promise` connection pool reading `DB_HOST`, `DB_PORT` (default 3306), `DB_USER`, `DB_PASSWORD`, `DB_NAME` from `process.env`. **R19** `src/db/pool.js`
+- [x] 5.6 Create `src/repositories/mysqlProductRepository.js` implementing the repository contract (`list`, `findById`, `insert`, `replace`, `remove`) as async functions; GROUP_CONCAT LEFT JOIN for reads; BEGIN/COMMIT/ROLLBACK transactions for insert and replace; ON DELETE CASCADE for remove; cast DECIMAL price and BIGINT id to JS `Number`. **R19, R20** `src/repositories/mysqlProductRepository.js`
+- [x] 5.7 Update `src/services/productService.js` to make all methods async and `await` repository calls; validation logic and error codes unchanged. **R19** `src/services/productService.js`
+- [x] 5.8 Update `src/controllers/productController.js` to make `respond` async, `await` service calls, and return HTTP 500 for unexpected non-AppError exceptions. **R19** `src/controllers/productController.js`
+- [x] 5.9 Update `src/app.js` to load dotenv, add startup connectivity check, log safe error and exit 1 on DB failure, wire MySQL repository when `NODE_ENV !== 'test'`, keep in-memory for `NODE_ENV === 'test'`. **R19, R21** `src/app.js`
+
+### 6. Integration Tests, Documentation, and Verification
+
+- [x] 6.1 Create `test/mysqlRepository.integration.test.js`: insert, findById, replace, remove against real DB; cleanup only test data; never delete 9 seed products. **R19, R20** `test/mysqlRepository.integration.test.js`
+- [x] 6.2 Add `test:integration` npm script running only `test/*.integration.test.js`; `npm test` continues to run unit tests only. **R19** `package.json`
+- [x] 6.3 Run `npm test` — all 33 unit tests pass without a database connection. **R18, R19** `test/productService.test.js`
+- [x] 6.4 Update `README.md` with MySQL prerequisites, database setup steps (schema.sql + seed), `.env` creation, and persistence behavior. **R21** `README.md`
+- [ ] 6.5 Run `npm run test:integration` against a live MySQL instance; confirm insert/find/replace/remove and that the 9 seed products remain. **R19, R20** `test/mysqlRepository.integration.test.js`
+- [ ] 6.6 Run Postman Collection Runner against the MySQL-backed server (`npm run dev`); verify all existing request scenarios pass. **R1–R17, R19** `api-documentation/`
+- [ ] 6.7 Manually verify that data created via POST survives a server restart, confirming MySQL durability. **R15, R19**
 
 ## Task Dependency Graph
 
@@ -51,140 +73,43 @@ Rujukan `R1` sampai `R18` menunjuk ke `.kiro/specs/product-catalog-crud/requirem
 ```json
 {
   "waves": [
-    {
-      "id": 0,
-      "tasks": [
-        "1.1"
-      ]
-    },
-    {
-      "id": 1,
-      "tasks": [
-        "1.2"
-      ]
-    },
-    {
-      "id": 2,
-      "tasks": [
-        "1.3"
-      ]
-    },
-    {
-      "id": 3,
-      "tasks": [
-        "1.4"
-      ]
-    },
-    {
-      "id": 4,
-      "tasks": [
-        "2.5",
-        "2.6"
-      ]
-    },
-    {
-      "id": 5,
-      "tasks": [
-        "2.4"
-      ]
-    },
-    {
-      "id": 6,
-      "tasks": [
-        "2.3"
-      ]
-    },
-    {
-      "id": 7,
-      "tasks": [
-        "2.2"
-      ]
-    },
-    {
-      "id": 8,
-      "tasks": [
-        "2.1"
-      ]
-    },
-    {
-      "id": 9,
-      "tasks": [
-        "3.1"
-      ]
-    },
-    {
-      "id": 10,
-      "tasks": [
-        "3.2"
-      ]
-    },
-    {
-      "id": 11,
-      "tasks": [
-        "3.3"
-      ]
-    },
-    {
-      "id": 12,
-      "tasks": [
-        "3.4"
-      ]
-    },
-    {
-      "id": 13,
-      "tasks": [
-        "3.5"
-      ]
-    },
-    {
-      "id": 14,
-      "tasks": [
-        "3.6"
-      ]
-    },
-    {
-      "id": 15,
-      "tasks": [
-        "4.1",
-        "4.3"
-      ]
-    },
-    {
-      "id": 16,
-      "tasks": [
-        "4.2",
-        "4.4"
-      ]
-    },
-    {
-      "id": 17,
-      "tasks": [
-        "4.5"
-      ]
-    },
-    {
-      "id": 18,
-      "tasks": [
-        "4.6"
-      ]
-    },
-    {
-      "id": 19,
-      "tasks": [
-        "4.7"
-      ]
-    },
-    {
-      "id": 20,
-      "tasks": [
-        "4.8"
-      ]
-    }
+    { "id": 0, "tasks": ["1.1"] },
+    { "id": 1, "tasks": ["1.2"] },
+    { "id": 2, "tasks": ["1.3"] },
+    { "id": 3, "tasks": ["1.4"] },
+    { "id": 4, "tasks": ["2.5", "2.6"] },
+    { "id": 5, "tasks": ["2.4"] },
+    { "id": 6, "tasks": ["2.3"] },
+    { "id": 7, "tasks": ["2.2"] },
+    { "id": 8, "tasks": ["2.1"] },
+    { "id": 9, "tasks": ["3.1"] },
+    { "id": 10, "tasks": ["3.2"] },
+    { "id": 11, "tasks": ["3.3"] },
+    { "id": 12, "tasks": ["3.4"] },
+    { "id": 13, "tasks": ["3.5"] },
+    { "id": 14, "tasks": ["3.6"] },
+    { "id": 15, "tasks": ["4.1", "4.3"] },
+    { "id": 16, "tasks": ["4.2", "4.4"] },
+    { "id": 17, "tasks": ["4.5"] },
+    { "id": 18, "tasks": ["4.6"] },
+    { "id": 19, "tasks": ["4.7"] },
+    { "id": 20, "tasks": ["4.8"] },
+    { "id": 21, "tasks": ["5.1", "5.2", "5.3", "5.4"] },
+    { "id": 22, "tasks": ["5.5"] },
+    { "id": 23, "tasks": ["5.6"] },
+    { "id": 24, "tasks": ["5.7"] },
+    { "id": 25, "tasks": ["5.8"] },
+    { "id": 26, "tasks": ["5.9"] },
+    { "id": 27, "tasks": ["6.1", "6.4"] },
+    { "id": 28, "tasks": ["6.2", "6.3"] },
+    { "id": 29, "tasks": ["6.5"] },
+    { "id": 30, "tasks": ["6.6"] },
+    { "id": 31, "tasks": ["6.7"] }
   ]
 }
 ```
 
-Diagram berikut menunjukkan **ketergantungan logis**, bukan riwayat waktu eksekusi Kiro. Nomor mengacu ke kelompok tugas di atas.
+Diagram berikut menunjukkan **ketergantungan logis**. Nomor mengacu ke kelompok tugas di atas.
 
 ```mermaid
 flowchart TD
@@ -195,23 +120,33 @@ flowchart TD
     E --> F["4.6 Verifikasi HTTP Postman"]
     F --> G["4.7 Push GitHub"]
     G --> H["4.8 Buat ZIP LMS"]
+    D --> I["5. MySQL repository and infrastructure"]
+    I --> J["6.1–6.4 Integration test file + docs (kode selesai)"]
+    J --> K["6.5 npm run test:integration (perlu .env + MySQL)"]
+    K --> L["6.6 Postman HTTP verification (MySQL-backed)"]
+    L --> M["6.7 Durability check (POST lalu restart)"]
 ```
 
-**Ketergantungan penting:** testing POST → PUT/PATCH → DELETE dijalankan secara berurutan terhadap instance server yang sama; sebelum uji CRUD, dataset sebaiknya dikembalikan ke sembilan seed product. Dokumentasi final dan pengumpulan menunggu hasil verifikasi HTTP nyata.
+**Ketergantungan penting:**
+- 5.1–5.9 selesai di kode; verifikasi runtime memerlukan `.env` yang valid.
+- 6.5–6.7 memerlukan MySQL live — tidak bisa diverifikasi tanpa koneksi database aktif.
+- Postman CRUD flow (6.6) harus dijalankan terhadap server yang sedang berjalan; dataset tidak direset otomatis saat restart.
 
 ## Notes
 
-- Status `[x]` berasal dari implementasi dan pengujian JavaScript yang tersedia, **bukan** berarti Kiro Spec workflow telah mengeksekusi semua task.
-- PUT yang sudah ada sengaja tetap menerima partial update untuk kompatibilitas; PATCH adalah endpoint baru untuk partial update.
-- Hasil unit test tidak menggantikan pengujian HTTP nyata dari Postman.
-- Jangan commit `node_modules`, `.env`, ataupun folder `.git` ke ZIP LMS; folder `.kiro/specs/` justru perlu ikut disertakan.
+- Status `[x]` pada grup 5 dan 6.1–6.4 berdasarkan verifikasi kode dan `npm test` (33/33 lulus).
+- 6.5–6.7 belum dieksekusi karena memerlukan koneksi MySQL live dan belum ada `.env` saat implementasi.
+- Restart server MySQL **tidak** mengembalikan data ke kondisi awal (berbeda dari in-memory).
+- PUT yang sudah ada sengaja tetap menerima partial update untuk kompatibilitas; PATCH adalah endpoint baru.
+- Jangan commit `node_modules`, `.env`, ataupun folder `.git`; folder `.kiro/specs/` perlu ikut disertakan.
 
 ### Acceptance Gate Sebelum Dikumpulkan
 
-- Semua test otomatis lokal lulus (`npm test`).
-- Server Express berhasil berjalan di lokal (`npm run dev`).
-- Postman Collection Runner lulus dari dataset awal sembilan produk dan kembali ke sembilan setelah CRUD.
-- `PUT` lama tetap bekerja; `PATCH` berhasil mengubah sebagian field dan nested variants.
-- Tidak ada rahasia, `node_modules`, atau `.git` dalam ZIP pengumpulan.
-- `requirements.md`, `design.md`, `tasks.md` hadir dan sesuai implementasi.
-
+- [x] `npm test` — 33/33 unit tests lulus tanpa database.
+- [ ] `npm run test:integration` lulus terhadap MySQL lokal.
+- [ ] Server `npm run dev` berhasil start dan terhubung ke MySQL.
+- [ ] Postman Collection Runner lulus semua folder (GET, search, filter, sort, combined, CRUD).
+- [ ] Data POST tetap ada setelah restart server (konfirmasi MySQL durability).
+- [ ] PUT lama dan PATCH keduanya bekerja (terlihat dari Postman).
+- [ ] `.env` tidak ada dalam commit atau ZIP pengumpulan.
+- [ ] `requirements.md`, `design.md`, `tasks.md` hadir dan sesuai implementasi.

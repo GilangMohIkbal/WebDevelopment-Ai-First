@@ -1,17 +1,20 @@
-{
-  "name": "product-catalog-service",
-  "version": "1.0.0",
-  "description": "Product Catalog Service - exercise backend (Node.js + Express)",
-  "main": "src/app.js",
-  "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js",
-    "test": "node --test test/*.test.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  },
-  "engines": {
-    "node": ">=18"
-  }
+﻿{
+    "name":  "product-catalog-service",
+    "version":  "1.0.0",
+    "description":  "Product Catalog Service - exercise backend (Node.js + Express)",
+    "main":  "src/app.js",
+    "scripts":  {
+                    "start":  "node src/app.js",
+                    "dev":  "node --watch src/app.js",
+                    "test":  "node --test test/productService.test.js",
+                    "test:integration":  "node --test test/*.integration.test.js"
+                },
+    "dependencies":  {
+                         "dotenv":  "18.0.9",
+                         "express":  "^4.18.2",
+                         "mysql2":  "3.24.6"
+                     },
+    "engines":  {
+                    "node":  "\u003e=18"
+                }
 }

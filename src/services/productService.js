@@ -1,4 +1,6 @@
-// Use cases: tidak mengimpor Express, req, res, maupun modul penyimpanan konkret.
+﻿// Use cases: tidak mengimpor Express, req, res, maupun modul penyimpanan konkret.
+// Semua metode async agar kompatibel dengan MySQL repository.
+// await pada nilai non-Promise (in-memory) langsung resolve — tidak ada perubahan pada tests.
 const { validateProduct } = require("../utils/validateProduct");
 const { AppError } = require("../domain/errors");
 
@@ -6,15 +8,15 @@ const VALID_SORTS = ["name_asc", "name_desc", "price_asc", "price_desc"];
 const SCALAR_FIELDS = ["name", "description", "category", "price", "image"];
 
 function createProductService(repository) {
-  function getById(rawId) {
-    const product = repository.findById(Number(rawId));
+  async function getById(rawId) {
+    const product = await repository.findById(Number(rawId));
     if (!product) {
       throw new AppError("NOT_FOUND", `Product dengan id ${rawId} tidak ditemukan`);
     }
     return product;
   }
 
-  function list(query = {}) {
+  async function list(query = {}) {
     const { q, category, minPrice, maxPrice, sort } = query;
     for (const [key, value] of Object.entries({ q, category, minPrice, maxPrice, sort })) {
       if (value !== undefined && typeof value !== "string") {
@@ -43,7 +45,7 @@ function createProductService(repository) {
       throw new AppError("BAD_REQUEST", `Nilai sort tidak valid: '${sort}'. Gunakan salah satu: ${VALID_SORTS.join(", ")}`);
     }
 
-    let result = repository.list();
+    let result = await repository.list();
     if (q && q.trim() !== "") {
       const keyword = q.toLowerCase();
       result = result.filter((p) => p.name.toLowerCase().includes(keyword) || p.description.toLowerCase().includes(keyword));
@@ -77,14 +79,14 @@ function createProductService(repository) {
     return response;
   }
 
-  function create(body) {
+  async function create(body) {
     const errors = validateProduct(body);
     if (errors.length) throw new AppError("VALIDATION", "Data produk tidak valid", errors);
 
-    const existing = repository.list();
-    const nextId = existing.length ? Math.max(...existing.map((p) => p.id)) + 1 : 1;
+    // MySQL: id ditentukan oleh AUTO_INCREMENT — tidak perlu menghitung MAX(id).
+    // In-memory: tetap di-handle oleh repository.insert() yang mengembalikan produk dengan id.
     const product = {
-      id: nextId,
+      // id tidak disertakan; repository insert masing-masing menentukan id-nya sendiri.
       name: body.name,
       description: body.description,
       category: body.category,
@@ -99,9 +101,8 @@ function createProductService(repository) {
   }
 
   // Legacy PUT adalah partial-update; PATCH memiliki kontrak partial-update yang sama.
-  // Keduanya berbagi implementasi agar kompatibilitas Postman lama terjaga.
-  function update(rawId, body) {
-    const existing = getById(rawId);
+  async function update(rawId, body) {
+    const existing = await getById(rawId);
     const errors = validateProduct(body, { partial: true });
     if (errors.length) throw new AppError("VALIDATION", "Data produk tidak valid", errors);
 
@@ -119,9 +120,9 @@ function createProductService(repository) {
     return repository.replace(existing.id, updated);
   }
 
-  function remove(rawId) {
-    const existing = getById(rawId);
-    const deleted = repository.remove(existing.id);
+  async function remove(rawId) {
+    const existing = await getById(rawId);
+    const deleted = await repository.remove(existing.id);
     return {
       message: `Product dengan id ${existing.id} berhasil dihapus`,
       data: deleted,

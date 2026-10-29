@@ -1,4 +1,4 @@
-# Panduan Postman — Product Catalog CRUD + PATCH
+﻿# Panduan Postman â€” Product Catalog CRUD + PATCH
 
 **Base URL:** `http://localhost:3000`  
 **Collection:** `Product_Catalog_API_Full_CRUD.postman_collection.json`
@@ -6,7 +6,7 @@
 ## Import
 
 1. Pastikan Node.js sudah terpasang. Dari akar proyek: `npm ci` (atau `npm install`), lalu `npm run dev`.
-2. Pada Postman: **Import** → pilih file JSON collection.
+2. Pada Postman: **Import** â†’ pilih file JSON collection.
 3. Pastikan collection variable `baseUrl` adalah `http://localhost:3000`.
 4. Jalankan GET pertama `GET /api/products`; respons harus 200, `total` = 9 sebelum ada mutasi.
 
@@ -19,12 +19,12 @@
 | 03 - Category & Price | Category, inclusive bounds, invalid price |
 | 04 - Sorting | Sort name/price dan error invalid |
 | 05 - Combined | Gabungan beberapa kriteria |
-| 06 - CRUD Mutation Flow | **Jalankan berurutan** POST → GET → PUT → PATCH → GET → error cases → DELETE → GET |
+| 06 - CRUD Mutation Flow | **Jalankan berurutan** POST â†’ GET â†’ PUT â†’ PATCH â†’ GET â†’ error cases â†’ DELETE â†’ GET |
 | 07 - Validation Edge Cases | Query ganda, image URL invalid, quantity pecahan, PATCH invalid |
 
 ## Pengujian perubahan data (wajib urut)
 
-Sebelum menjalankan folder **06**, restart server agar data kembali ke **9 produk**.
+Sebelum menjalankan folder **06**, pastikan dataset masih bersih. Karena server menggunakan **MySQL**, restart server **tidak** mengembalikan data ke kondisi awal. Jika data sudah berubah dari pengujian sebelumnya, hapus produk test secara manual atau gunakan request DELETE yang ada di folder 06, lalu verifikasi `total = 9` sebelum memulai.
 
 1. POST membuat produk baru, status **201**, `createdProductId` disimpan di variable collection.
 2. GET memastikan produk baru bisa dilihat.
@@ -34,7 +34,7 @@ Sebelum menjalankan folder **06**, restart server agar data kembali ke **9 produ
 6. GET memastikan harga, deskripsi, dan variant benar.
 7. Request tidak valid mengembalikan **400**; ID tidak ada mengembalikan **404**.
 8. DELETE menghapus produk yang dibuat; GET detail mengembalikan **404**.
-9. GET list akhir kembali `total` **9**.
+9. GET list akhir kembali `total` **9** — hanya jika tidak ada produk lain yang ditambahkan sebelumnya. Data tersimpan di MySQL; restart server tidak mereset jumlah ini.
 
 Selama penggunaan collection, jangan jalankan POST dan DELETE secara acak di luar urutan ketika ingin memvalidasi total yang diharapkan.
 

@@ -4,7 +4,7 @@
 
 The Product_Catalog_Service is a REST API built with Node.js and Express that provides product catalog functionality for e-commerce or client applications. The service exposes a single resource, the Product, over a set of HTTP endpoints under `/api/products`. The service supports browsing the catalog, searching by keyword, filtering by category and price range, sorting by name or price, viewing a single product detail, and create, update, partial update, and delete operations. Product data is held in memory and shared across all route handlers for the lifetime of a single server process.
 
-This document was initially approved with 16 requirements for an existing Product_Catalog_Service. Requirements 17–18 below record a subsequent user-approved scope enhancement (PATCH + layered architecture refactor); they were not present at initial approval. The requirements describe observable behavior as implemented and subsequently extended. The acceptance criteria describe intended, testable behavior based on the current source code in `src/app.js`, `src/data/products.js`, `src/routes/products.js`, and `src/utils/validateProduct.js`.
+This document was initially approved with 16 requirements for an existing Product_Catalog_Service. Requirements 17–18 below record a subsequent user-approved scope enhancement (PATCH + layered architecture refactor); they were not present at initial approval. Requirements 19–21 further extend the scope to replace in-memory storage with MySQL persistence, transactional write operations, and secure configuration management. The requirements describe observable behavior as implemented and subsequently extended. The acceptance criteria describe intended, testable behavior based on the current source code in `src/app.js`, `src/data/products.js`, `src/routes/products.js`, and `src/utils/validateProduct.js`.
 
 ### Scope Override Note
 
@@ -22,10 +22,10 @@ The original Product Requirements Document (`PRD - Product Catalog.md`) defines 
 - Query parameter validation on the list endpoint
 - In-memory data persistence semantics
 - API documentation via a Postman collection and usage guide
+- MySQL database persistence via connection pool (replaces in-memory storage at runtime)
 
 ### Out of Scope
 
-- Database or persistence beyond in-memory storage
 - Authentication and authorization
 - Frontend user interface
 - Product management workflows beyond the implemented CRUD endpoints
@@ -44,6 +44,10 @@ The original Product Requirements Document (`PRD - Product Catalog.md`) defines 
 - **Postman_Collection**: The API test collection file that documents and exercises all Product_Catalog_Service endpoints with automated test scripts.
 - **Postman_Guide**: The markdown usage guide that describes importing the Postman_Collection and running its test scenarios.
 - **Error_Response**: A JSON response body returned by the Product_Catalog_Service when a request cannot be processed, containing a `message` field and, for validation failures, an `errors` array.
+- **MySQL_Repository**: The mysqlProductRepository adapter that implements the repository contract using MySQL as the backing store.
+- **Connection_Pool**: The mysql2/promise connection pool used by the MySQL_Repository to manage database connections.
+- **DB_Session**: A single MySQL connection obtained from the Connection_Pool for the duration of a transaction.
+- **Environment_Variable**: A runtime configuration value supplied to the Product_Catalog_Service via a `.env` file loaded by dotenv.
 
 ## Requirements
 
@@ -235,3 +239,43 @@ The original Product Requirements Document (`PRD - Product Catalog.md`) defines 
 5. WHEN a new application instance is constructed for testing, THE Product_Catalog_Service SHALL use a separate copy of seed data, avoiding unexpected shared mutable state between test instances.
 6. THE repository SHALL prevent callers from mutating stored Product records through returned references.
 7. THE Product_Catalog_Service SHALL provide automated tests for core behavior and CRUD/PATCH regression cases, runnable through `npm test`.
+
+### Requirement 19: MySQL Persistence
+
+**User Story:** As a developer, I want product data to be stored in MySQL so that data survives server restarts.
+
+#### Acceptance Criteria
+
+1. WHEN the Product_Catalog_Service starts with valid database environment variables, THE Product_Catalog_Service SHALL connect to MySQL using a Connection_Pool and verify the connection before accepting requests.
+2. WHEN the database connection fails at startup, THE Product_Catalog_Service SHALL log a safe error message (without exposing credentials) and exit with a non-zero code.
+3. THE MySQL_Repository SHALL implement the same repository contract (list, findById, insert, replace, remove) as the in-memory repository so that the service layer requires no changes.
+4. THE MySQL_Repository SHALL read product data by joining the `products` table with `product_variant_options` and mapping rows to the JSON API shape: `id` (number), `name`, `description`, `category`, `price` (number, not DECIMAL string), `image`, `variants.colorOrSize` (array of strings), `variants.quantity` (integer).
+5. WHEN a GET list or detail request is served from MySQL, THE Product_Catalog_Service SHALL return responses with the same JSON shape and HTTP status codes as the in-memory implementation.
+6. THE MySQL_Repository SHALL use parameterized SQL queries for all user-supplied values to prevent SQL injection.
+7. WHEN the Product_Catalog_Service is started normally (not in test mode), THE Product_Catalog_Service SHALL use the MySQL_Repository as the active repository.
+8. WHEN the Product_Catalog_Service is started for unit testing, THE Product_Catalog_Service SHALL use the in-memory repository so that tests remain isolated from the database.
+
+### Requirement 20: Transactional Write Operations
+
+**User Story:** As a developer, I want create and update operations to be atomic so that a partial failure does not leave inconsistent data across the products and product_variant_options tables.
+
+#### Acceptance Criteria
+
+1. WHEN a POST request successfully creates a product, THE MySQL_Repository SHALL insert into `products` and into `product_variant_options` within a single DB_Session transaction, committing only if both inserts succeed.
+2. WHEN a PUT or PATCH request successfully updates a product, THE MySQL_Repository SHALL update the `products` row and replace all `product_variant_options` rows for that product within a single DB_Session transaction.
+3. IF any SQL statement within a write transaction fails, THE MySQL_Repository SHALL roll back the transaction and propagate the error so that no partial data is written.
+4. THE new Product id SHALL be determined by MySQL AUTO_INCREMENT rather than by calculating MAX(id) in the service layer.
+5. WHEN a DELETE request is processed, THE MySQL_Repository SHALL delete the product row; the `product_variant_options` rows SHALL be removed automatically via ON DELETE CASCADE.
+
+### Requirement 21: Secure Configuration and Schema Artifacts
+
+**User Story:** As a developer, I want database credentials and schema artifacts managed safely so that the project can be set up by others without exposing secrets.
+
+#### Acceptance Criteria
+
+1. THE Product_Catalog_Service SHALL read DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME from Environment_Variables via a `.env` file loaded by dotenv.
+2. THE Product_Catalog_Service SHALL provide a `.env.example` file listing the required Environment_Variable names with placeholder values and no real credentials.
+3. THE `.env` file SHALL be listed in `.gitignore` so that real credentials are never committed to source control.
+4. THE Product_Catalog_Service SHALL provide a `database/schema.sql` file that describes the `products` and `product_variant_options` table definitions matching the existing database schema.
+5. THE existing `database/seed_product_catalog.sql` SHALL be preserved unchanged.
+6. THE README SHALL document how to create `.env` from `.env.example` and how to start the service with MySQL.

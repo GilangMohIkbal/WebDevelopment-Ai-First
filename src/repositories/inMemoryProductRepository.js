@@ -1,5 +1,8 @@
-// Adapter penyimpanan: implementasi in-memory. Dapat diganti tanpa mengubah service.
+﻿// Adapter penyimpanan: implementasi in-memory. Dapat diganti tanpa mengubah service.
 // Setiap instance menyimpan salinan seed agar test/server baru tidak berbagi state.
+//
+// insert() membuat id secara otomatis (max id yang ada + 1, atau 1 jika kosong),
+// sama seperti MySQL AUTO_INCREMENT, sehingga service tidak perlu menghitung id.
 function createInMemoryProductRepository(initialProducts) {
   const data = structuredClone(initialProducts);
 
@@ -12,8 +15,11 @@ function createInMemoryProductRepository(initialProducts) {
       return product ? structuredClone(product) : null;
     },
     insert(product) {
-      data.push(structuredClone(product));
-      return structuredClone(product);
+      // Hasilkan id baru: max(id yang ada) + 1, atau 1 jika dataset kosong.
+      const nextId = data.length ? Math.max(...data.map((p) => p.id)) + 1 : 1;
+      const newProduct = structuredClone({ ...product, id: nextId });
+      data.push(newProduct);
+      return structuredClone(newProduct);
     },
     replace(id, product) {
       const index = data.findIndex((item) => item.id === id);
