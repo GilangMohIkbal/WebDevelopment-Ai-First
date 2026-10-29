@@ -1,18 +1,36 @@
-// Entry point aplikasi Product Catalog Service.
-// Menggunakan Express tanpa database; data produk disimpan in-memory.
-
+// Composition root: susun dependency aplikasi, tanpa logika bisnis.
 const express = require("express");
-const productsRouter = require("./routes/products");
+const seedProducts = require("./data/products");
+const { createInMemoryProductRepository } = require("./repositories/inMemoryProductRepository");
+const { createProductService } = require("./services/productService");
+const { createProductController } = require("./controllers/productController");
+const { createProductsRouter } = require("./routes/products");
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+function createApp({ initialProducts = seedProducts } = {}) {
+  const app = express();
+  const repository = createInMemoryProductRepository(initialProducts);
+  const service = createProductService(repository);
+  const controller = createProductController(service);
 
-// Middleware untuk parsing JSON body (dipersiapkan untuk endpoint berikutnya).
-app.use(express.json());
+  app.use(express.json());
+  app.use("/api/products", createProductsRouter(controller));
 
-// Route utama untuk modul produk.
-app.use("/api/products", productsRouter);
+  // Body JSON tidak valid: jangan kirim stack trace kepada klien.
+  app.use((error, req, res, next) => {
+    if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+      return res.status(400).json({ message: "Format JSON tidak valid" });
+    }
+    return next(error);
+  });
 
-app.listen(PORT, () => {
-  console.log(`Product Catalog Service berjalan di http://localhost:${PORT}`);
-});
+  return app;
+}
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  createApp().listen(PORT, () => {
+    console.log(`Product Catalog Service berjalan di http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { createApp };

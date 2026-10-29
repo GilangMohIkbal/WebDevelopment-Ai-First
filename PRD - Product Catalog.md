@@ -13,7 +13,7 @@
 
 Product Catalog Service menyediakan informasi produk yang dapat digunakan oleh aplikasi e-commerce atau client lain. Layanan ini membantu pengguna menemukan produk yang relevan, membandingkan pilihan berdasarkan harga, dan melihat informasi produk sebelum mengambil keputusan lebih lanjut.
 
-Untuk exercise bootcamp, cakupan dibatasi pada modul **Product**. Fokusnya adalah kemampuan menjelajahi katalog—melihat produk, mencari, memfilter, mengurutkan, dan melihat detail produk. Pengelolaan produk, transaksi, serta proses pembelian tidak termasuk dalam kebutuhan inti.
+Cakupan dibatasi pada modul **Product**. Fokusnya adalah kemampuan menjelajahi katalog—melihat produk, mencari, memfilter, mengurutkan, dan melihat detail produk. Pengelolaan produk, transaksi, serta proses pembelian tidak termasuk dalam kebutuhan inti.
 
 ## 2. Problem Statement
 
@@ -281,4 +281,3 @@ PRD ini menjadi acuan kebutuhan produk. Dokumen development berikut menerjemahka
 - `design.md` — menentukan kontrak API, bentuk request/response, struktur aplikasi, strategi penyimpanan data, dan keputusan teknis lain yang diperlukan.
 - `task.md` — membagi pekerjaan menjadi task kecil yang bisa diimplementasikan serta diverifikasi secara bertahap.
 
-Untuk kelas yang berfokus pada tahap development, dokumen tersebut dapat disediakan sebagai context awal. Fokus student adalah memahami dokumen yang relevan, memilih context yang sesuai dengan task, menggunakan AI secara terarah, dan memverifikasi output-nya.

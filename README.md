@@ -1,57 +1,75 @@
-# Product Catalog REST API
+# Product Catalog REST API — CRUD + PATCH
 
-Mini project **Modern Back-End Development with AI** (Node.js + Express.js). Aplikasi menyediakan katalog produk e-commerce sederhana dengan pencarian, filter, sorting, dan operasi CRUD. Data disimpan dalam array JavaScript (*in-memory*) tanpa database.
+Mini Project **Modern Back-End Development with AI** menggunakan JavaScript, Node.js, Express.js. Mendukung GET katalog dan detail, pencarian, filter kategori/harga, sorting, serta operasi POST, PUT, PATCH, DELETE.
 
-## Teknologi
+**Workflow dokumentasi:** `.kiro/specs/product-catalog-crud/` berisi Requirements, Design, dan Tasks. Desain memotret implementasi proyek yang sudah ada, kemudian perubahan PATCH dan pemisahan arsitektur. Specs ini merupakan dokumentasi retrospektif beserta enhancement, bukan klaim semua tahapan dilakukan sebelum coding.
 
-- JavaScript (Node.js)
-- Express.js
-- Postman untuk pengujian dan dokumentasi API
+## Persyaratan
 
-## Cara menjalankan
+- Node.js **18 atau lebih baru** (native `structuredClone`, `node:test`)
+- npm
+- Postman untuk pengujian HTTP
 
-Pastikan Node.js dan npm telah terpasang. Buka terminal pada folder yang berisi `package.json`, lalu jalankan:
+## Jalankan aplikasi
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Server tersedia di `http://localhost:3000`. Untuk mode non-watch, gunakan `npm start`.
+Server berjalan di `http://localhost:3000`. Gunakan `npm start` untuk mode tanpa auto-restart.
 
-Coba `GET http://localhost:3000/api/products` di Postman atau browser.
+Untuk menjalankan pengujian otomatis logika aplikasi:
 
-## Endpoint
+```bash
+npm test
+```
 
-| Method | Endpoint | Kegunaan | Respons utama |
+`npm test` menggunakan Node.js test runner, tanpa perlu server berjalan. Jalankan **Postman** secara terpisah untuk memeriksa request/response HTTP nyata. `npm ci` dapat diganti `npm install` jika diperlukan.
+
+## Struktur proyek
+
+```text
+src/
+├── app.js                       # composition root + Express setup
+├── routes/products.js           # route definitions only
+├── controllers/productController.js
+├── services/productService.js   # use cases, filter & CRUD
+├── domain/errors.js             # application errors
+├── repositories/inMemoryProductRepository.js
+├── data/products.js             # seed 9 products in 4 categories
+└── utils/validateProduct.js     # shared input validation
+test/productService.test.js       # Node.js automated tests
+api-documentation/               # Postman Collection + guide
+.kiro/specs/product-catalog-crud/ # requirements, design, tasks
+```
+
+Pemisahan ini adalah arsitektur berlapis **terinspirasi Clean Architecture**, karena service tidak bergantung pada Express atau data store konkret; repository diinjeksi dari `app.js`.
+
+## API
+
+| Method | Endpoint | Kegunaan | HTTP success |
 | --- | --- | --- | --- |
-| GET | `/api/products` | Daftar, pencarian, filter, sorting | 200 |
-| GET | `/api/products/:id` | Detail produk | 200 / 404 |
-| POST | `/api/products` | Buat produk | 201 / 400 |
-| PUT | `/api/products/:id` | Ubah field produk (mendukung update parsial) | 200 / 400 / 404 |
-| DELETE | `/api/products/:id` | Hapus produk | 200 / 404 |
+| GET | `/api/products` | Browse, search, filter, sort | 200 |
+| GET | `/api/products/:id` | Detail produk | 200 |
+| POST | `/api/products` | Buat produk baru | 201 |
+| PUT | `/api/products/:id` | Ubah sebagian field (**perilaku lama dipertahankan**) | 200 |
+| PATCH | `/api/products/:id` | Ubah sebagian field, termasuk nested `variants` | 200 |
+| DELETE | `/api/products/:id` | Hapus produk | 200 |
 
-**Query parameter GET list** (semua opsional):
+Error: **400** untuk input/query invalid, **404** untuk ID tidak ditemukan.
 
-| Parameter | Contoh | Keterangan |
-| --- | --- | --- |
-| `q` | `sepatu` | Pencarian nama/deskripsi, tanpa peka kapital |
-| `category` | `Footwear` | Filter kategori |
-| `minPrice` | `120000` | Batas minimum inklusif |
-| `maxPrice` | `180000` | Batas maksimum inklusif |
-| `sort` | `price_desc` | `name_asc`, `name_desc`, `price_asc`, `price_desc` |
+Parameter GET list semuanya opsional: `q` (keyword name/description, case-insensitive), `category` (exact case-insensitive), `minPrice`, `maxPrice` (batas inklusif, IDR), `sort` (`name_asc`, `name_desc`, `price_asc`, `price_desc`). Parameter dapat dikombinasikan.
 
-Contoh kombinasi:
+Contoh:
 
 ```http
 GET http://localhost:3000/api/products?q=sepatu&category=Footwear&minPrice=300000&sort=price_desc
 ```
 
-Respons GET list berisi `data` (array) dan `total` (jumlah produk hasil filter). Hasil kosong mengembalikan `data: []`, `total: 0` dan pesan penjelas.
+GET list merespons `{ "data": [...], "total": N }` dan jika kosong menambahkan `message`.
 
-## Contoh request POST
-
-Gunakan header `Content-Type: application/json`.
+### Contoh POST
 
 ```http
 POST http://localhost:3000/api/products
@@ -72,26 +90,23 @@ Content-Type: application/json
 }
 ```
 
-Respons berhasil: HTTP **201** dengan objek produk dan ID otomatis. `PUT` mengizinkan perubahan sebagian field (misalnya `{ "price": 300000 }`) sesuai implementasi tugas. `DELETE` mengembalikan HTTP **200** dengan informasi produk yang dihapus. Input tidak valid menghasilkan **400** dan produk tidak ada menghasilkan **404**.
+Response **201** mengembalikan produk dengan ID otomatis (misalnya `10` pada dataset awal).
 
-## Dokumentasi dan pengujian Postman
+### Contoh PUT dan PATCH
 
-Impor file:
+Keduanya menerima **body parsial** untuk menjaga kompatibilitas implementasi PUT lama, contohnya:
 
-`api-documentation/Product_Catalog_API_Full_CRUD.postman_collection.json`
+```http
+PATCH http://localhost:3000/api/products/10
+Content-Type: application/json
+```
 
-Langkah:
+```json
+{ "variants": { "quantity": 99 } }
+```
 
-1. Jalankan server lokal.
-2. Buka Postman → **Import** → pilih file JSON di atas.
-3. Jalankan request GET satu per satu.
-4. Untuk pengujian perubahan data, jalankan folder **06 - CRUD Mutation Flow (run sequentially)** secara berurutan dengan Collection Runner, mulai dari POST sampai DELETE.
-5. Pastikan HTTP status, payload, dan hasil test sesuai. Semua pengujian yang dikirim di Postman Collection perlu dijalankan sendiri pada lingkungan lokal.
+Response 200 berisi produk terbaru; `variants.colorOrSize` yang lama tetap ada. Perilaku partial pada PUT adalah **kompatibilitas mini project**, berbeda dari konvensi umum PUT sebagai full replace.
 
-## Catatan batasan
+## Dokumentasi API dan pengujian
 
-- Dataset awal berisi 9 produk dari 4 kategori.
-- Data CRUD hanya disimpan di memori. **Restart server mengembalikan data awal**, sehingga perubahan tidak permanen.
-- Foto menggunakan URL placeholder; URL valid secara format tidak menjamin bahwa isi gambar sesuai nama produk atau selalu tersedia.
-- Tidak menggunakan database, autentikasi, frontend, atau deployment produksi.
-- Jangan upload `node_modules` atau file rahasia seperti `.env` ke GitHub; dependensi dapat dipasang lewat `npm install`.
+Impor `api-documentation/Product_Catalog_API_Full_CRUD.postman_collection.json` ke Postman, lalu baca `api-documentation/PANDUAN_POSTMAN.md`. Jalankan folder CRUD **berurutan**, karena operasi POST, PUT, PATCH, DELETE mengubah data memori.

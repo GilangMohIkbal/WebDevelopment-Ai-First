@@ -1,5 +1,5 @@
 // Helper validasi field produk.
-// Dipakai oleh POST (mode full: semua field wajib) dan PUT (mode partial:
+// Dipakai oleh POST (mode full: semua field wajib), PUT dan PATCH (mode partial:
 // hanya memvalidasi field yang dikirim).
 //
 // Mengembalikan array pesan error (kosong berarti valid).
@@ -48,7 +48,7 @@ function validateProduct(data, { partial = false } = {}) {
 
   // price: angka >= 0.
   if (data.price !== undefined) {
-    if (typeof data.price !== "number" || Number.isNaN(data.price) || data.price < 0) {
+    if (typeof data.price !== "number" || !Number.isFinite(data.price) || data.price < 0) {
       errors.push("price harus berupa angka (number) >= 0");
     }
   } else if (!partial) {

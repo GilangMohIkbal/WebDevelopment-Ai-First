@@ -1,43 +1,60 @@
-# Panduan Postman — Product Catalog API
+# Panduan Postman — Product Catalog CRUD + PATCH
 
-**Base URL:** `http://localhost:3000`
+**Base URL:** `http://localhost:3000`  
+**Collection:** `Product_Catalog_API_Full_CRUD.postman_collection.json`
 
-File koleksi: `Product_Catalog_API_Full_CRUD.postman_collection.json`
+## Import
 
-## Impor
+1. Pastikan Node.js sudah terpasang. Dari akar proyek: `npm ci` (atau `npm install`), lalu `npm run dev`.
+2. Pada Postman: **Import** → pilih file JSON collection.
+3. Pastikan collection variable `baseUrl` adalah `http://localhost:3000`.
+4. Jalankan GET pertama `GET /api/products`; respons harus 200, `total` = 9 sebelum ada mutasi.
 
-1. Pastikan server berjalan lewat `npm run dev` dari akar proyek.
-2. Pada Postman, klik **Import** dan pilih file `.json`.
-3. Collection menyediakan variabel `baseUrl` untuk alamat server; default `http://localhost:3000`.
+## Cakupan request
 
-## Pengujian utama
+| Folder | Cakupan |
+| --- | --- |
+| 01 - Browse & Detail | GET list/detail/404 |
+| 02 - Search | Case-insensitive search + empty result |
+| 03 - Category & Price | Category, inclusive bounds, invalid price |
+| 04 - Sorting | Sort name/price dan error invalid |
+| 05 - Combined | Gabungan beberapa kriteria |
+| 06 - CRUD Mutation Flow | **Jalankan berurutan** POST → GET → PUT → PATCH → GET → error cases → DELETE → GET |
+| 07 - Validation Edge Cases | Query ganda, image URL invalid, quantity pecahan, PATCH invalid |
 
-- GET `/api/products`: 200, array 9 produk awal (`data` dan `total`).
-- GET `/api/products/1`: 200, detail produk.
-- GET `/api/products/99`: 404, produk tidak ada.
-- GET `?q=sepatu`: 200, dua produk sepatu.
-- GET `?category=Electronics`: 200, dua produk.
-- GET `?minPrice=120000&maxPrice=180000`: 200, kedua batas inklusif.
-- GET `?sort=price_desc`: 200, harga turun.
-- GET query dengan `minPrice > maxPrice`: 400, pesan kesalahan.
-- GET pencarian yang tidak cocok: 200, `data=[]`, `total=0`.
-- GET dengan kombinasi `q`, `category`, `minPrice`, `sort`: 200, cocok semua filter.
+## Pengujian perubahan data (wajib urut)
 
-## Pengujian CRUD berurutan
+Sebelum menjalankan folder **06**, restart server agar data kembali ke **9 produk**.
 
-Jalankan folder **06 - CRUD Mutation Flow (run sequentially)** dalam urutan default:
+1. POST membuat produk baru, status **201**, `createdProductId` disimpan di variable collection.
+2. GET memastikan produk baru bisa dilihat.
+3. PUT mengubah `price` jadi 300000 dan kemudian `variants.quantity` jadi 99 (**PUT lama tetap partial**).
+4. PATCH mengubah `description` tanpa menyentuh field lain.
+5. PATCH mengubah `variants.quantity` menjadi 88 tanpa kehilangan `colorOrSize`.
+6. GET memastikan harga, deskripsi, dan variant benar.
+7. Request tidak valid mengembalikan **400**; ID tidak ada mengembalikan **404**.
+8. DELETE menghapus produk yang dibuat; GET detail mengembalikan **404**.
+9. GET list akhir kembali `total` **9**.
 
-1. POST produk baru → **201**, ID tercatat otomatis ke variabel collection.
-2. GET ID baru → **200**.
-3. PUT harga → **200**.
-4. PUT quantity varian → **200**, warna lama tetap.
-5. GET detail lagi → **200**, nilai update tersimpan.
-6. POST data tidak valid → **400**.
-7. PUT harga negatif → **400**.
-8. PUT ID tidak ada → **404**.
-9. DELETE produk yang baru dibuat → **200**.
-10. GET produk yang telah dihapus → **404**.
-11. DELETE ID tidak ada → **404**.
-12. GET list → **200**, jumlah kembali 9 (dengan asumsi dataset awal dan belum ada perubahan lain).
+Selama penggunaan collection, jangan jalankan POST dan DELETE secara acak di luar urutan ketika ingin memvalidasi total yang diharapkan.
 
-**Catatan:** Request PUT dan DELETE mengubah data di memori. Untuk memulai dari dataset awal, restart server. Simpan screenshot request/response Postman sebagai bukti bila diminta instruktur.
+## Kontrak UPDATE
+
+- `PUT /api/products/:id` mempertahankan perilaku proyek versi awal: **partial update** (kompatibilitas mundur).
+- `PATCH /api/products/:id` juga mendukung **partial update**. Contoh body:
+
+```json
+{
+  "variants": { "quantity": 88 }
+}
+```
+
+Keduanya mengembalikan 200 beserta produk terbaru; field yang tidak dikirim tidak berubah. Sebagai konvensi REST, PUT sering berarti penggantian penuh, namun mini project mempertahankan perilaku PUT lama agar tidak memutus pengujian sebelumnya. Di masa depan dapat diubah melalui versi API baru.
+
+## Status yang diharapkan
+
+- **200** GET/PUT/PATCH/DELETE sukses, serta pencarian tanpa hasil (`data: []`).
+- **201** POST sukses.
+- **400** validasi input/query JSON tidak valid.
+- **404** produk ID tidak ditemukan.
+

@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Product Catalog Service - Full CRUD Assignment",
-    "description": "Dokumentasi Postman untuk Mini Project Back-End AI-First. GET katalog (q, category, minPrice, maxPrice, sort), detail, POST, PUT (partial update sesuai implementasi), DELETE, dan validasi 400/404. Jalankan server localhost:3000. Folder CRUD dijalankan berurutan karena membuat lalu menghapus data sementara",
+    "name": "Product Catalog API - GET POST PUT PATCH DELETE (Clean Architecture)",
+    "description": "Node.js + Express.js Product Catalog REST API. POST creates products, PUT (legacy) and PATCH merge partial fields, DELETE removes products. In-memory storage resets when server restarts. Run the CRUD Mutation Flow sequentially after restart. Source: .kiro/specs/product-catalog-crud.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -482,7 +482,80 @@
           ]
         },
         {
-          "name": "05 - GET Verify updated",
+          "name": "05 - PATCH description saja",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Diperbarui melalui PATCH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.expect(p.description).to.eql(\"Diperbarui melalui PATCH\");",
+                  "pm.expect(p.price).to.eql(300000);",
+                  "pm.expect(p.variants.quantity).to.eql(99);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 - PATCH varian quantity saja",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variants\": {\n    \"quantity\": 88\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.expect(p.variants.quantity).to.eql(88);",
+                  "pm.expect(p.variants.colorOrSize).to.eql([\"Black\",\"Silver\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 - GET Verify updated",
           "request": {
             "method": "GET",
             "header": [],
@@ -497,14 +570,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "const p=pm.response.json(); pm.expect(p.price).to.eql(300000); pm.expect(p.variants.quantity).to.eql(99);"
+                  "const p=pm.response.json(); pm.expect(p.price).to.eql(300000); pm.expect(p.variants.quantity).to.eql(88);",
+                  "pm.expect(pm.response.json().description).to.eql(\"Diperbarui melalui PATCH\");"
                 ]
               }
             }
           ]
         },
         {
-          "name": "06 - POST Invalid missing fields",
+          "name": "08 - POST Invalid missing fields",
           "request": {
             "method": "POST",
             "header": [
@@ -541,7 +615,7 @@
           ]
         },
         {
-          "name": "07 - PUT Invalid negative price",
+          "name": "09 - PUT Invalid negative price",
           "request": {
             "method": "PUT",
             "header": [
@@ -578,7 +652,7 @@
           ]
         },
         {
-          "name": "08 - PUT Not found",
+          "name": "10 - PUT Not found",
           "request": {
             "method": "PUT",
             "header": [
@@ -614,7 +688,75 @@
           ]
         },
         {
-          "name": "09 - DELETE Created product",
+          "name": "11 - PATCH Invalid negative price",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{createdProductId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": -20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors).to.be.an(\"array\").that.is.not.empty;"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 - PATCH Not found",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/999",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 20000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.expect(pm.response.json().message).to.include(\"tidak ditemukan\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 - DELETE Created product",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -636,7 +778,7 @@
           ]
         },
         {
-          "name": "10 - GET Verify deleted",
+          "name": "14 - GET Verify deleted",
           "request": {
             "method": "GET",
             "header": [],
@@ -657,7 +799,7 @@
           ]
         },
         {
-          "name": "11 - DELETE Not found",
+          "name": "15 - DELETE Not found",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -678,7 +820,7 @@
           ]
         },
         {
-          "name": "12 - GET Verify original count",
+          "name": "16 - GET Verify original count",
           "request": {
             "method": "GET",
             "header": [],
@@ -694,6 +836,133 @@
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
                   "pm.expect(pm.response.json().total).to.eql(9);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Validation Edge Cases",
+      "item": [
+        {
+          "name": "GET duplicate query q -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?q=sepatu&q=kaos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().message).to.include(\"Parameter q\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST image bukan URL -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid\",\n  \"description\": \"invalid\",\n  \"category\": \"Fashion\",\n  \"price\": 12000,\n  \"image\": \"bukan-url\",\n  \"variants\": {\n    \"colorOrSize\": [\n      \"S\"\n    ],\n    \"quantity\": 1\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors.join(\" \")).to.include(\"image\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST quantity pecahan -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid\",\n  \"description\": \"invalid\",\n  \"category\": \"Fashion\",\n  \"price\": 12000,\n  \"image\": \"https://example.com/a.png\",\n  \"variants\": {\n    \"colorOrSize\": [\n      \"S\"\n    ],\n    \"quantity\": 1.7\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors.join(\" \")).to.include(\"quantity\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH nested colorOrSize invalid -> 400",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variants\": {\n    \"colorOrSize\": []\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().errors.join(\" \")).to.include(\"colorOrSize\");"
                 ]
               }
             }
